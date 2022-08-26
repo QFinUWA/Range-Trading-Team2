@@ -57,8 +57,6 @@ def logic(account, lookback): # Logic function to be used for each time interval
 
 
 
-
-
 '''
 preprocess_data() function:
     Context: Called once at the beginning of the backtest. TOTALLY OPTIONAL. 
