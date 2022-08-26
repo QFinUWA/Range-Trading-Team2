@@ -1,3 +1,4 @@
+from turtle import pos
 import pandas as pd
 import time
 import multiprocessing as mp
@@ -9,33 +10,54 @@ from backtester import API_Interface as api
 training_period = 20 # How far the rolling average takes into calculation
 standard_deviations = 3.5 # Number of Standard Deviations from the mean the Bollinger Bands sit
 
-'''
-logic() function:
-    Context: Called for every row in the input data.
+def GetPosition(account, close):
+    invested = 0
+    for position in account.positions: # Close all current positions
+        sin = 1 if position.type_ == 'long' else -1
+        invested += position.shares*close*sin
 
-    Input:  account - the account object
-            lookback - the lookback dataframe, containing all data up until this point in time
+    return (invested/account.total_value(close))
 
-    Output: none, but the account object will be modified on each call
-'''
+def SetPosition(position, account, close):
+    cur_pos = GetPosition(account, close)
+    buy = account.total_value(close)*(position - cur_pos)
+
+    for position in account.positions:
+        # first if buying, try and remove shorts | if selling, try and remove longs
+        if buy > 0 and position.type_ == 'short':
+            value = position.shares*close
+            account.close_position(position, min(1, buy/value), close)
+            buy = min(0, buy - value)
+        
+        # first if selling, try and remove longs
+        elif buy < 0 and position.type_ == 'long':
+            value = position.shares*close
+            
+            account.close_position(position, min(1, -buy/value), close)
+            buy = min(0, buy + value)
+
+    # if still not at position, make trade
+    if buy != 0 and account.buying_power>0:
+        typ = 'long' if buy > 0 else 'short'
+
+        account.enter_position(typ, min(abs(buy), account.buying_power), close)
+
 
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
     
     today = len(lookback)-1
-    if(today > training_period): # If the lookback is long enough to calculate the Bollinger Bands
-
-        if(lookback['close'][today] < lookback['BOLD'][today]): # If current price is below lower Bollinger Band, enter a long position
-            for position in account.positions: # Close all current positions
-                account.close_position(position, 1, lookback['close'][today])
-            if(account.buying_power > 0):
-                account.enter_position('long', account.buying_power, lookback['close'][today]) # Enter a long position
-
-        if(lookback['close'][today] > lookback['BOLU'][today]): # If today's price is above the upper Bollinger Band, enter a short position
-            for position in account.positions: # Close all current positions
-                account.close_position(position, 1, lookback['close'][today])
-            if(account.buying_power > 0):
-                account.enter_position('short', account.buying_power, lookback['close'][today]) # Enter a short position
-
+    if(today == 0):
+        SetPosition(1,account, lookback['close'][today])
+        print(GetPosition(account, lookback['close'][today]))
+    if(today == 3000):
+        SetPosition(-1,account, lookback['close'][today])
+        print(GetPosition(account, lookback['close'][today]))
+    if(today == 5000):
+        SetPosition(0,account, lookback['close'][today])
+        print(GetPosition(account, lookback['close'][today]))
+    if(today == 10000):
+        SetPosition(0.7,account, lookback['close'][today])
+        print(GetPosition(account, lookback['close'][today]))
 '''
 preprocess_data() function:
     Context: Called once at the beginning of the backtest. TOTALLY OPTIONAL. 
@@ -60,7 +82,7 @@ def preprocess_data(list_of_stocks):
 
 if __name__ == "__main__":
     # list_of_stocks = ["TSLA_2020-03-01_2022-01-20_1min"] 
-    list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min", "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
+    list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min"]#, "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
     list_of_stocks_proccessed = preprocess_data(list_of_stocks) # Preprocess the data
     results = tester.test_array(list_of_stocks_proccessed, logic, chart=True) # Run backtest on list of stocks using the logic function
 
