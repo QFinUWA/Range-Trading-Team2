@@ -44,8 +44,19 @@ def SetPosition(position, account, close):
 
 
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
-    
     today = len(lookback)-1
+    close = lookback['close'][today]
+
+    if today%180 == 0:
+        if lookback['EV'][today] >= 0.02:
+            SetPosition(1,account,close)
+
+    if lookback['%15Min_wav'][today] <= -0.005:
+        for position in account.positions:
+        # first if buying, try and remove shorts | if selling, try and remove longs
+            account.close_position(position, 1, close)
+    '''
+    
     if(today == 0):
         SetPosition(1,account, lookback['close'][today])
         print(GetPosition(account, lookback['close'][today]))
@@ -58,25 +69,18 @@ def logic(account, lookback): # Logic function to be used for each time interval
     if(today == 210000):
         SetPosition(0.7,account, lookback['close'][today])
         print(GetPosition(account, lookback['close'][today]))
-
+    '''
 
 
 def preprocess_data(list_of_stocks):
     list_of_stocks_processed = []
     for stock in list_of_stocks:
-        df = pd.read_csv("data/" + stock + ".csv", parse_dates=[0])
-        df['TP'] = (df['close'] + df['low'] + df['high'])/3 # Calculate Typical Price
-        df['std'] = df['TP'].rolling(training_period).std() # Calculate Standard Deviation
-        df['MA-TP'] = df['TP'].rolling(training_period).mean() # Calculate Moving Average of Typical Price
-        df['BOLU'] = df['MA-TP'] + standard_deviations*df['std'] # Calculate Upper Bollinger Band
-        df['BOLD'] = df['MA-TP'] - standard_deviations*df['std'] # Calculate Lower Bollinger Band
-        df.to_csv("data/" + stock + "_Processed.csv", index=False) # Save to CSV
         list_of_stocks_processed.append(stock + "_Processed")
     return list_of_stocks_processed
 
 if __name__ == "__main__":
-    # list_of_stocks = ["TSLA_2020-03-01_2022-01-20_1min"] 
-    list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min"]#, "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
+    #list_of_stocks = ["AAPL_2020-03-24_2022-02-12_1min"] 
+    list_of_stocks = ["TSLA_2020-03-01_2022-01-20_1min"]#, "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
     list_of_stocks_proccessed = preprocess_data(list_of_stocks) # Preprocess the data
     results = tester.test_array(list_of_stocks_proccessed, logic, chart=True) # Run backtest on list of stocks using the logic function
 

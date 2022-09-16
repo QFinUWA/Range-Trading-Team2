@@ -57,6 +57,15 @@ def logic(account, lookback): # Logic function to be used for each time interval
 
 
 
+'''
+preprocess_data() function:
+    Context: Called once at the beginning of the backtest. TOTALLY OPTIONAL. 
+             Each of these can be calculated at each time interval, however this is likely slower.
+
+    Input:  list_of_stocks - a list of stock data csvs to be processed
+
+    Output: list_of_stocks_processed - a list of processed stock data csvs
+'''
 def preprocess_data(list_of_stocks):
     list_of_stocks_processed = []
     for stock in list_of_stocks:
