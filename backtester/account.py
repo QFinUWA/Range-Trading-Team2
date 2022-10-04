@@ -137,6 +137,8 @@ class Account:
         self.positions = []
         self.opened_trades = []
         self.closed_trades = []
+        self.a = 0
+        self.b = 180
         if isinstance(fee, dict):
             self.fee = fee
 
